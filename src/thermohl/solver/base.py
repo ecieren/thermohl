@@ -199,7 +199,7 @@ class Solver(ABC):
         core = "core"
         time = "time"
         transit = "I"
-        temp = "t"
+        temp = "T"
         tsurf = "t_surf"
         tavg = "t_avg"
         tcore = "t_core"
