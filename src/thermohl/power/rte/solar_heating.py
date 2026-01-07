@@ -49,6 +49,7 @@ def solar_irradiance(
     return np.where(solar_altitude > 0.0, atmospheric_coefficient, 0.0)
 
 
+# NB : why use Qs when every other solar_heating has srad ?
 class SolarHeating(SolarHeatingBase):
     def __init__(
         self,
@@ -77,7 +78,7 @@ class SolarHeating(SolarHeatingBase):
             Qs (float | numpy.ndarray | None): Optional measured solar irradiance (W/m2).
         """
         self.alpha = alpha
-        if np.isnan(Qs).all():
+        if Qs is None or np.isnan(Qs).all():
             Qs = solar_irradiance(np.deg2rad(lat), month, day, hour)
         sa = sun.solar_altitude(np.deg2rad(lat), month, day, hour)
         sz = sun.solar_azimuth(np.deg2rad(lat), month, day, hour)
