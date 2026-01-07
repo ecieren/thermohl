@@ -23,6 +23,8 @@ class _SRad:
             clean (list[float]): Coefficients for the polynomial function to compute atmospheric turbidity in clean air conditions.
             indus (list[float]): Coefficients for the polynomial function to compute atmospheric turbidity in industrial (polluted) air conditions.
         """
+        if len(clean) != 7 or len(indus) != 7:
+            raise ValueError(f"Both inputs must contain 7 elements.")
         self.clean = clean
         self.indus = indus
 
