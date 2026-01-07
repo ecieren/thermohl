@@ -46,7 +46,7 @@ def test_balance():
         t1 = s1.steady_temperature(
             tol=2.0, maxiter=16, return_err=False, return_power=False
         )
-        t1 = t1["t"].values
+        t1 = t1["T"].values
         # 3t solve
         df = s.steady_temperature(
             Tsg=t1, Tcg=t1, return_err=True, return_power=True, tol=tol, maxiter=64
@@ -86,6 +86,7 @@ def test_consistency():
                 target=t,
                 return_err=True,
                 return_power=True,
+                return_temp=True,
                 tol=1.0e-09,
                 maxiter=64,
             )

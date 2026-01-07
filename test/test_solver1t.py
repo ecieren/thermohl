@@ -50,8 +50,8 @@ def test_balance():
             - df["P_precipitation"]
         )
         atol = np.maximum(
-            np.abs(s.balance(df["t"] + 0.5 * df["err"])),
-            np.abs(s.balance(df["t"] - 0.5 * df["err"])),
+            np.abs(s.balance(df["T"] + 0.5 * df["err"])),
+            np.abs(s.balance(df["T"] - 0.5 * df["err"])),
         )
         assert np.allclose(bl, 0.0, atol=atol)
 
@@ -89,4 +89,4 @@ def test_consistency():
         dg = s.steady_temperature(
             return_err=True, return_power=True, tol=1.0e-09, maxiter=64
         )
-        assert np.allclose(dg["t"].values, 100.0)
+        assert np.allclose(dg["T"].values, 100.0)
