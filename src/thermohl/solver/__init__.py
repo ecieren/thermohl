@@ -10,10 +10,9 @@
 from typing import Dict, Any, Optional, Union, Type
 
 from thermohl.power import cigre as cigrep
-from thermohl.power import rte as rtep
 from thermohl.power import ieee as ieeep
 from thermohl.power import olla as ollap
-
+from thermohl.power import rte as rtep
 from thermohl.solver.base import Args, Solver
 from thermohl.solver.slv1d import Solver1D
 from thermohl.solver.slv1t import Solver1T
