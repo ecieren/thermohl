@@ -48,7 +48,7 @@ class SolarHeating(PowerTerm):
         hour: floatArrayLike,
         D: floatArrayLike,
         alpha: floatArrayLike,
-        srad: Optional[floatArrayLike] = None,
+        srad: Optional[floatArrayLike] = float("nan"),
         **kwargs: Any,
     ):
         r"""Init with args.
@@ -64,10 +64,14 @@ class SolarHeating(PowerTerm):
             hour (float | numpy.ndarray): Hour of the day (solar, must be between 0 and 23).
             D (float | numpy.ndarray): external diameter.
             alpha (float | numpy.ndarray): Solar absorption coefficient.
-            srad (float | numpy.ndarray | None): Optional precomputed solar radiation term.
+            srad (float | numpy.ndarray): Optional solar irradiance (W/m2).
+
+        Returns:
+            float | numpy.ndarray: Power term value (W.m\ :sup:`-1`\ ).
+
         """
         self.alpha = alpha
-        if srad is None:
+        if np.all(np.isnan(srad)):
             self.srad = SolarHeating._solar_radiation(
                 np.deg2rad(lat), np.deg2rad(azm), al, month, day, hour
             )

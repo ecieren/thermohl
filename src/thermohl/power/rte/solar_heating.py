@@ -49,7 +49,6 @@ def solar_irradiance(
     return np.where(solar_altitude > 0.0, atmospheric_coefficient, 0.0)
 
 
-# NB : why use Qs when every other solar_heating has srad ?
 class SolarHeating(SolarHeatingBase):
     def __init__(
         self,
@@ -60,7 +59,7 @@ class SolarHeating(SolarHeatingBase):
         hour: floatArrayLike,
         D: floatArrayLike,
         alpha: floatArrayLike,
-        Qs: Optional[floatArrayLike] = None,
+        srad: Optional[floatArrayLike] = float("nan"),
         **kwargs: Any,
     ):
         r"""Build with args.
@@ -75,14 +74,17 @@ class SolarHeating(SolarHeatingBase):
             hour (float | numpy.ndarray): Hour of the day (solar, must be between 0 and 23).
             D (float | numpy.ndarray): external diameter.
             alpha (numpy.ndarray): Solar absorption coefficient.
-            Qs (float | numpy.ndarray | None): Optional measured solar irradiance (W/m2).
+            srad (float | numpy.ndarray | None): Optional solar irradiance (W/m2).
+
+        Returns:
+            float | numpy.ndarray: Power term value (W.m\ :sup:`-1`\ ).
+
         """
         self.alpha = alpha
-        if Qs is None or np.isnan(Qs).all():
-            Qs = solar_irradiance(np.deg2rad(lat), month, day, hour)
+        if np.all(np.isnan(srad)):
+            srad = solar_irradiance(np.deg2rad(lat), month, day, hour)
         sa = sun.solar_altitude(np.deg2rad(lat), month, day, hour)
         sz = sun.solar_azimuth(np.deg2rad(lat), month, day, hour)
         th = np.arccos(np.cos(sa) * np.cos(sz - np.deg2rad(azm)))
-        srad = Qs * np.sin(th)
-        self.srad = np.maximum(srad, 0.0)
+        self.srad = np.maximum(srad * np.sin(th), 0.0)
         self.D = D
