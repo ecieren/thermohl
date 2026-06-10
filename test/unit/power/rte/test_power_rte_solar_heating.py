@@ -6,8 +6,18 @@
 # SPDX-License-Identifier: MPL-2.0
 
 
+from math import pi
+import pytest
+
 import numpy as np
-from thermohl.power.rte.solar_heating import compute_solar_irradiance, SolarHeating
+from thermohl.power.rte.solar_heating import (
+    compute_solar_irradiance,
+    SolarHeating,
+    estimate_nebulosity_from_diffuse_and_beam_radiation,
+    compute_global_radiation,
+    compute_diffuse_radiation,
+    compute_beam_radiation,
+)
 
 
 def test_compute_solar_irradiance_night():
@@ -154,3 +164,81 @@ def test_solar_irradiance_ignored_by_rte_solar_heating():
 
     # With non-zero parameters, value() would differ if the keyword argument were used.
     assert np.allclose(solar_heating_1.value(100), solar_heating_2.value(100))
+
+
+@pytest.mark.parametrize(
+    "input_nebulosity, solar_altitude, expected_nebulosity",
+    [
+        (0, -pi / 4, np.nan),
+        (0, pi / 3, 0),
+        (0, pi / 2, 0),
+        (0, pi, np.nan),
+        (0, 5 * pi / 4, np.nan),
+        (3.5, -pi / 4, np.nan),
+        (3.5, pi / 3, 3),
+        (3.5, pi / 2, 3),
+        (3.5, pi, np.nan),
+        (3.5, 5 * pi / 4, np.nan),
+        (8, -pi / 4, np.nan),
+        (8, pi / 3, 8),
+        (8, pi / 2, 8),
+        (8, pi, np.nan),
+        (8, 5 * pi / 4, np.nan),
+    ],
+)
+def test_estimate_nebulosity_from_diffuse_and_beam_radiation__scalar(
+    input_nebulosity,
+    solar_altitude,
+    expected_nebulosity,
+) -> None:
+    global_radiation = compute_global_radiation(solar_altitude, input_nebulosity)
+    diffuse_radiation = compute_diffuse_radiation(global_radiation, input_nebulosity)
+    beam_radiation = compute_beam_radiation(
+        global_radiation, diffuse_radiation, solar_altitude
+    )
+
+    nebulosity_estimate = estimate_nebulosity_from_diffuse_and_beam_radiation(
+        solar_altitude, diffuse_radiation + beam_radiation
+    )
+
+    np.testing.assert_allclose(nebulosity_estimate, expected_nebulosity)
+
+
+def test_estimate_nebulosity_from_diffuse_and_beam_radiation__array() -> None:
+    input_nebulosity = np.array([1, 2])
+    solar_altitude = np.array([np.pi / 2, 0])
+    expected_nebulosity = np.array([1, np.nan])
+
+    global_radiation = compute_global_radiation(solar_altitude, input_nebulosity)
+    diffuse_radiation = compute_diffuse_radiation(global_radiation, input_nebulosity)
+    beam_radiation = compute_beam_radiation(
+        global_radiation, diffuse_radiation, solar_altitude
+    )
+
+    nebulosity_estimate = estimate_nebulosity_from_diffuse_and_beam_radiation(
+        solar_altitude, diffuse_radiation + beam_radiation
+    )
+
+    np.testing.assert_allclose(nebulosity_estimate, expected_nebulosity)
+
+
+def test_estimate_nebulosity_from_diffuse_and_beam_radiation__no_solution() -> None:
+    # Take the solar altitude and nebulosity which give the highest radiation
+    # (zenith and no clouds),
+    # compute the global radiation, take a greater value.
+    # It's impossible to find a nebulosity which gives this radiation,
+    # attempting to calculate it should raise an error.
+    solar_altitude = np.pi / 2
+
+    global_radiation = (
+        compute_global_radiation(solar_altitude=solar_altitude, nebulosity=0) + 10
+    )
+    diffuse_radiation = compute_diffuse_radiation(global_radiation, nebulosity=0)
+    beam_radiation = compute_beam_radiation(
+        global_radiation, diffuse_radiation, solar_altitude
+    )
+
+    with pytest.raises(ValueError):
+        estimate_nebulosity_from_diffuse_and_beam_radiation(
+            solar_altitude, diffuse_radiation + beam_radiation
+        )
