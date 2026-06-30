@@ -20,7 +20,6 @@ from thermohl.power.rte.solar_heating import (
     compute_diffuse_radiation,
     compute_beam_radiation,
 )
-from thermohl import errors as thermohl_errors
 
 
 def test_compute_solar_irradiance_night():
@@ -266,12 +265,13 @@ def test_estimate_nebulosity_from_diffuse_and_beam_radiation__array() -> None:
     np.testing.assert_allclose(nebulosity_estimate, expected_nebulosity)
 
 
-def test_estimate_nebulosity_from_diffuse_and_beam_radiation__no_solution() -> None:
-    # Take the solar altitude and nebulosity which give the highest radiation
-    # (zenith and no clouds),
-    # compute the global radiation, take a greater value.
-    # It's impossible to find a nebulosity which gives this radiation,
-    # attempting to calculate it should raise an error.
+def test_estimate_nebulosity_from_diffuse_and_beam_radiation__no_solution(
+    caplog,
+) -> None:
+    # Take the solar altitude and nebulosity which give the highest radiation (zenith and no clouds).
+    # Compute the global radiation, and use a greater value to try to compute nebulosity.
+    # It's impossible to find a nebulosity with the given radiation, attempting to
+    # calculate it should raise a warning log and return a saturated value (0 in this case).
     solar_altitude = np.pi / 2
 
     global_radiation = (
@@ -282,10 +282,13 @@ def test_estimate_nebulosity_from_diffuse_and_beam_radiation__no_solution() -> N
         global_radiation, diffuse_radiation, solar_altitude
     )
 
-    with pytest.raises(thermohl_errors.RadiationIncompatibleWithParametersError):
-        estimate_nebulosity_from_diffuse_and_beam_radiation(
+    with caplog.at_level("WARNING"):
+        nebulosity = estimate_nebulosity_from_diffuse_and_beam_radiation(
             solar_altitude, diffuse_radiation + beam_radiation
         )
+    assert "Bisection method" in caplog.text
+    assert "do not satisfy convergence conditions" in caplog.text
+    assert nebulosity == 0
 
 
 def test_estimate_nebulosity__array() -> None:
@@ -304,18 +307,32 @@ def test_estimate_nebulosity__array() -> None:
         latitude,
         longitude,
     )
-    assert np.allclose(nebulosity, np.array([5, 6]))
+    assert np.allclose(nebulosity, [5, 6])
 
 
-def test_estimate_nebulosity__array_no_solution() -> None:
+def test_estimate_nebulosity__inconsistent_radiation() -> None:
+    diffuse_plus_beam_radiation = np.array([10, 4200])
+    datetime_utc = np.array([np.datetime64("2026-06-15T12:00:00")])
+    latitude = np.array([45.0])
+    longitude = np.array([20.0])
+    nebulosity = estimate_nebulosity(
+        diffuse_plus_beam_radiation,
+        datetime_utc,
+        latitude,
+        longitude,
+    )
+    assert np.allclose(nebulosity, [8, 0])
+
+
+def test_estimate_nebulosity__array_night() -> None:
     diffuse_plus_beam_radiation = np.array([700])
     datetime_utc = np.array([np.datetime64("2026-06-15T00:00:00")])
     latitude = np.array([45.0])
     longitude = np.array([20.0])
-    with pytest.raises(thermohl_errors.RadiationIncompatibleWithParametersError):
-        estimate_nebulosity(
-            diffuse_plus_beam_radiation,
-            datetime_utc,
-            latitude,
-            longitude,
-        )
+    nebulosity = estimate_nebulosity(
+        diffuse_plus_beam_radiation,
+        datetime_utc,
+        latitude,
+        longitude,
+    )
+    assert np.isnan(nebulosity[0])

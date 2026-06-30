@@ -15,8 +15,6 @@ from thermohl import (
 from thermohl.power import SolarHeatingBase
 
 from thermohl.utils import bisect_v
-from thermohl import errors as thermohl_errors
-
 
 logger = logging.getLogger(__name__)
 
@@ -62,9 +60,6 @@ def estimate_nebulosity(
     """Estimate nebulosity from measured diffuse radiation + beam radiation.
 
     The results are rounded to the values which give the closest radiation sums.
-
-    Raises RadiationIncompatibleWithParametersError if it's impossible to have
-    this radiation level with given parameters (datetime_utc, latitude and longitude).
 
     Args:
         diffuse_plus_beam_solar_flow(np.ndarray): Array of diffuse radiation + beam radiation (in W/m²).
@@ -186,7 +181,7 @@ def estimate_nebulosity_from_diffuse_and_beam_radiation(
 
     For solar_altitude values corresponding to the night, the result is nan.
     Else, if no nebulosity could yield the given radiation (e.g. given radiation
-    is too high for given solar altitude), it raises a RadiationIncompatibleWithParametersError.
+    is too high or too low for given solar altitude), it provides a capped value respectively 0 or 8.
 
     Args:
         solar_altitude(float): solar altitude in radians.
@@ -213,13 +208,9 @@ def estimate_nebulosity_from_diffuse_and_beam_radiation(
     else:
         output_shape = (1,)
 
-    try:
-        # Very few iterations are needed because we want an integer approximate answer
-        nebulosity, _ = bisect_v(
-            f, lower_bound, upper_bound, output_shape, max_iterations=4
-        )
-    except ValueError:
-        raise thermohl_errors.RadiationIncompatibleWithParametersError()
+    nebulosity, _ = bisect_v(
+        f, lower_bound, upper_bound, output_shape, max_iterations=4
+    )
 
     rounded_down = np.floor(nebulosity)
     rounded_up = np.ceil(nebulosity)
