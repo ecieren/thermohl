@@ -263,12 +263,16 @@ class Solver3T(Solver_):
         time_step: float = 1.0e-05,
     ) -> floatArrayLike:
         """Estimation of a time-constant by linearization of the EDO."""
-        return -(self.args.linear_mass * self.args.heat_capacity) / (
-            self.balance_3t(surface_temperature + time_step, core_temperature)
-            - self.balance_3t(surface_temperature - time_step, core_temperature)
-            + self.balance_3t(surface_temperature, core_temperature + time_step)
-            - self.balance_3t(surface_temperature, core_temperature - time_step)
-        ) * (2 * time_step)
+        return (
+            -(self.args.linear_mass * self.args.heat_capacity)
+            / (
+                self.balance_3t(surface_temperature + time_step, core_temperature)
+                - self.balance_3t(surface_temperature - time_step, core_temperature)
+                + self.balance_3t(surface_temperature, core_temperature + time_step)
+                - self.balance_3t(surface_temperature, core_temperature - time_step)
+            )
+            * (2 * time_step)
+        )
 
     def morgan_3t(
         self,
@@ -523,10 +527,12 @@ class Solver3T(Solver_):
                 surface_temperature[i - 1, :], core_temperature[i - 1, :]
             )
             tau = self.tau(surface_temperature[i - 1, :], core_temperature[i - 1, :])
-            average_temperature[i, :] = average_temperature[i - 1, :] + time_step * bal * imc
+            average_temperature[i, :] = (
+                average_temperature[i - 1, :] + time_step * bal * imc
+            )
             morgan = c1 * (self.joule_heating.value(average_temperature[i, :]) - bal)
-            tx = tx + dt * (-tx + morgan) / (tau * 0.3)
-            ty = ty + dt * (-ty + average_temperature[i - 1, :]) / (tau * 0.02)
+            tx = tx + time_step * (-tx + morgan) / (tau * 0.3)
+            ty = ty + time_step * (-ty + average_temperature[i - 1, :]) / (tau * 0.02)
             core_temperature[i, :] = c2 * tx + ty
             surface_temperature[i, :] = ty - (1 - c2) * tx
 
